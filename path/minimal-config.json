@@ -1,0 +1,184 @@
+{
+  "logging": {
+    "logs": {
+      "access": {
+        "writer": {
+          "filename": "/var/log/caddy/caddy_https.log",
+          "output": "file"
+        },
+        "level": "info",
+        "include": [
+          "http.log.access.global_logger"
+        ]
+      },
+      "default": {
+        "writer": {
+          "filename": "/var/log/caddy/caddy.log",
+          "output": "file"
+        },
+        "encoder": {
+          "format": "console"
+        },
+        "level": "info",
+        "exclude": [
+          "http.log.access.global_logger"
+        ]
+      }
+    }
+  },
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":443"
+          ],
+          "routes": [
+            {
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "vars",
+                          "root": "{{base_path}}{http.request.host}"
+                        },
+                        {
+                          "encodings": {
+                            "gzip": {}
+                          },
+                          "handler": "encode",
+                          "prefer": [
+                            "gzip"
+                          ]
+                        },
+                        {
+                          "handler": "file_server",
+                          "hide": [
+                            "path\\Caddyfile"
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "errors": {
+            "routes": [
+              {
+                "match": [
+                  {
+                    "expression": "{http.error.status_code} == 404"
+                  }
+                ],
+                "handle": [
+                  {
+                    "handler": "static_response",
+                    "headers": {
+                      "Location": [
+                        "/index.html"
+                      ]
+                    },
+                    "status_code": 302
+                  }
+                ]
+              }
+            ]
+          },
+          "logs": {
+            "default_logger_name": "global_logger"
+          }
+        },
+        "srv1": {
+          "listen": [
+            ":80"
+          ],
+          "routes": [
+            {
+              "match": [
+                {
+                  "host": [
+                    "127.0.0.1"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "handler": "subroute",
+                          "routes": [
+                            {
+                              "handle": [
+                                {
+                                  "body": "OK",
+                                  "handler": "static_response",
+                                  "status_code": 200
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "match": [
+                        {
+                          "path": [
+                            "/healthz"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "subroute",
+                          "routes": [
+                            {
+                              "handle": [
+                                {
+                                  "handler": "path_checker",
+                                  "path": "{{base_path}}"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "handler": "static_response",
+                          "status_code": 404
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "terminal": true
+            }
+          ]
+        }
+      }
+    },
+    "tls": {
+      "automation": {
+        "policies": [
+          {
+            "on_demand": true
+          }
+        ],
+        "on_demand": {
+          "permission": {
+            "endpoint": "http://127.0.0.1/ask",
+            "module": "http"
+          }
+        }
+      }
+    }
+  }
+}

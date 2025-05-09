@@ -1,0 +1,66 @@
+{
+	#        admin "localhost:2097"
+	log {
+		output stdout
+		format console
+		level info
+	}
+	on_demand_tls {
+		ask http://127.0.0.1/ask
+	}
+
+	log access {
+		include http.log.access.global_logger
+		output stdout
+		level info
+	}
+}
+
+(proxy) {
+	encode gzip
+
+	header {
+		-Server
+		-Via
+		-x-envoy-upstream-service-time
+		-x-powered-by
+	}
+
+	file_server {
+		precompressed br gzip
+	}
+}
+
+:443 {
+	tls {
+		on_demand
+		issuer internal
+	}
+	log global_logger
+	route {
+		root * ./test/{host}
+
+		import proxy
+	}
+	handle_errors {
+		# for SPA app, comment if not needed
+		@404 {
+			expression {http.error.status_code} == 404
+		}
+		redir @404 /index.html permanent
+	}
+}
+
+http://127.0.0.1 {
+	log global_logger
+	route {
+		path_checker {
+			path "./test"
+			# domains test.localhost test2.localhost (optional, only if custom handler is added)
+		}
+	}
+	route /healthz {
+		respond "OK" 200
+	}
+	respond 404
+}

@@ -1,0 +1,101 @@
+{
+	#        admin "localhost:2097"
+	log {
+		output file /var/log/caddy/caddy.log
+		format console
+		level info
+	}
+	on_demand_tls {
+		ask http://127.0.0.1/ask
+	}
+
+	log access {
+		include http.log.access.global_logger
+		output file /var/log/caddy/caddy_https.log
+		level info
+	}
+
+	# remove if fail2ban is not needed
+	log fail2ban {
+		include http.log.access.global_logger
+		output file /var/log/caddy/fail2ban.log
+		format transform "{ts} {request>remote_ip} {status}"
+	}
+}
+
+(proxy) {
+	encode gzip
+
+	header {
+		-Server
+		-Via
+		-x-envoy-upstream-service-time
+		-x-powered-by
+	}
+
+	header {
+		#		Content-Security-Policy "default-src https: data: 'unsafe-inline'; ; worker-src blob: https: data: 'unsafe-inline';"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=63072000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		X-XSS-Protection "1; mode=block"
+	}
+
+	file_server {
+		#precompressed br gzip # uncomment if you have precompressed br and gzip
+	}
+}
+
+:443 {
+	tls {
+		on_demand
+		issuer acme {
+			# email your_email_here
+		}
+	}
+	log global_logger
+	route {
+		root * /var/www/html/{host}
+
+		#@example1 host test.example.com #uncomment if custom rules for host is needed, also add domains below
+		#handle @example1 {
+		#    root * /custom-root-path
+		#}
+
+		rate_limit {
+			zone dymanic_host_path {
+				key {remote_host}{host}{path}
+				events 10
+				window 120s
+			}
+			zone dymanic_host_path2 {
+				key {remote_host}{host}{path}
+				events 100
+				window 3600s
+			}
+		}
+
+		import proxy
+	}
+	handle_errors {
+		# for SPA app, comment if not needed
+		@404 {
+			expression {http.error.status_code} == 404
+		}
+		redir @404 /index.html permanent
+	}
+}
+
+http://127.0.0.1 {
+	route {
+		path_checker {
+			path "/var/www/html/"
+			# domains test.localhost test2.localhost (optional, only if custom handler is added)
+		}
+	}
+	route /healthz {
+		respond "OK" 200
+	}
+	respond 404
+}
