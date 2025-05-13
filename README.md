@@ -1,6 +1,6 @@
 # Hostly - Multi-Domain File Server for Caddy
 
-Hostly is a Caddy server extension that enables hosting multiple domains from a single Caddy instance, with each domain having its own directory in the filesystem.
+Hostly is a Caddy extension for hosting multiple domains, each with its own directory.
 
 ## Features
 
@@ -33,7 +33,7 @@ You can pull the pre-built Docker image from GitHub Container Registry:
 
 ```bash
 docker pull ghcr.io/andrifix/hostly
-docker run -p 80:80 -p 443:443 -v /path/to/websites:/var/www/html ghcr.io/andrifix/hostly
+docker run -p 80:80 -p 443:443 -v /path/to/websites:/var/www/html -v data:/data ghcr.io/andrifix/hostly
 ```
 
 Or build it yourself:

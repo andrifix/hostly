@@ -12,7 +12,7 @@ COPY . .
 
 RUN mkdir ./bin
 
-RUN --mount=type=cache,target="/root/.cache/go-build" CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o ./hostify ./
+RUN --mount=type=cache,target="/root/.cache/go-build" CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o ./hostly ./
 
 FROM alpine:latest
 
@@ -20,14 +20,14 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app/
 
-COPY --from=builder /app/hostify /usr/local/bin/hostify
+COPY --from=builder /app/hostly /usr/local/bin/hostly
 COPY --from=builder /app/Caddyfile /etc/caddy/Caddyfile
-RUN mkdir "/var/log/caddy" && chown -R nobody:nobody /var/log/caddy
 
-EXPOSE 80 443
+EXPOSE 80 443 443/udp
 
-USER nobody
+ENV XDG_DATA_HOME=/data
+ENV XDG_CONFIG_HOME=/config
 
-HEALTHCHECK CMD wget --no-verbose --tries=1 --spider http://localhost/healthz || exit 1
+HEALTHCHECK CMD wget --no-verbose --tries=1 --spider http://127.0.0.1/healthz || exit 1
 
-CMD ["hostify", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+CMD ["hostly", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

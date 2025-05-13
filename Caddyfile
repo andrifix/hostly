@@ -1,6 +1,6 @@
 {
 	log {
-		output file /var/log/caddy/caddy.log
+		output stdout
 		format console
 		level info
 	}
@@ -10,7 +10,8 @@
 
 	log access {
 		include http.log.access.global_logger
-		output file /var/log/caddy/caddy_https.log
+		output stdout
+		format console
 		level info
 	}
 }

@@ -1,7 +1,6 @@
 package path
 
 import (
-	"fmt"
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"github.com/caddyserver/caddy/v2/caddyconfig/httpcaddyfile"
@@ -32,8 +31,7 @@ func (m *Checker) ServeHTTP(writer http.ResponseWriter, request *http.Request, h
 		return nil
 	}
 
-	if s, err := os.Stat(filename); err == nil && s.IsDir() {
-		fmt.Println(s)
+	if s, err := os.Stat(filename); err == nil && s.IsDir() && filename != "" {
 		writer.WriteHeader(http.StatusOK)
 		writer.Write([]byte("OK"))
 		return nil
